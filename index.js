@@ -51,8 +51,8 @@ async function startServer() {
     console.log('✅ Conexión a MySQL establecida')
 
     // En desarrollo puedes usar alter:true
-    await sequelize.sync({ alter: true })
-    console.log('🔄 Tablas sincronizadas con MySQL')
+   // await sequelize.sync({ force: true })
+   // console.log('🔄 Tablas sincronizadas con MySQL')
 
     // Iniciar servidor
     app.listen(PORT, () => {

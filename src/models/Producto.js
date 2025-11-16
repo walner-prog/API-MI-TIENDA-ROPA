@@ -8,6 +8,7 @@ const Producto = sequelize.define('Producto', {
   precio_venta: { type: DataTypes.DECIMAL(12,2), allowNull: false, defaultValue: 0 },
   stock: { type: DataTypes.INTEGER, allowNull: false, defaultValue: 0 },
   unidad: { type: DataTypes.STRING(20), allowNull: true },
+  marca: { type: DataTypes.STRING(100), allowNull: true },
   utilidad: { type: DataTypes.DECIMAL(12,2), allowNull: false, defaultValue: 0 } // NUEVO CAMPO
 }, {
   tableName: 'productos',

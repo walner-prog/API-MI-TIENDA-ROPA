@@ -56,3 +56,27 @@ export async function listarClientesCreditoController(req, res) {
     });
   }
 }
+
+/**
+ * 
+ * Controlador para listar clientes que tienen deuda pendiente para abonos
+ */
+
+export async function listarClientesConDeudaController(req, res) {
+    try {
+        const clientes = await clienteService.listarClientesConDeudaService();
+
+        return res.json({
+            success: true,
+            clientes
+        });
+
+    } catch (error) {
+        console.error("Error al obtener clientes con deuda:", error);
+        return res.status(500).json({
+            success: false,
+            message: "Error al obtener clientes con deuda"
+        });
+    }
+}
+   

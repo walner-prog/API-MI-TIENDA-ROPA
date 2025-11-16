@@ -133,3 +133,26 @@ export async function listarClientesCreditoService(query = {}) {
     totalSaldoPendiente
   };
 }
+
+
+// SOLO clientes con ventas a crédito Y saldo pendiente mayor a 0
+export async function listarClientesConDeudaService() {
+    const clientes = await Cliente.findAll({
+        attributes: ["id", "nombre", "telefono", "direccion"],
+        include: [
+            {
+                model: Venta,
+                as: "ventas",
+                where: {
+                    tipo_pago: "credito",
+                    estado: { [Op.ne]: "anulado" },
+                    saldo_pendiente: { [Op.gt]: 0 }
+                },
+                required: true // ⬅ IMPORTANTE: fuerza a traer solo clientes que cumplan
+            }
+        ],
+        order: [["nombre", "ASC"]]
+    });
+
+    return clientes;
+}

@@ -42,3 +42,32 @@ export const eliminarVenta = async (req, res) => {
     })
   }
 }
+
+
+
+export async function listarVentasPorClienteController(req, res) {
+  try {
+    const { id } = req.params;
+    const ventas = await ventaService.listarVentasPorClienteService(id);
+    res.json({ success: true, ventas });
+  } catch (error) {
+    res.status(error.status || 500).json({
+      success: false,
+      message: error.message
+    });
+  }
+}
+
+export async function obtenerDetalleVentaController(req, res) {
+  try {
+    const { id } = req.params;
+    const venta = await ventaService.obtenerDetalleVentaService(id);
+    res.json({ success: true, venta });
+  } catch (error) {
+    res.status(error.status || 500).json({
+      success: false,
+      message: error.message
+    });
+  }
+}
+

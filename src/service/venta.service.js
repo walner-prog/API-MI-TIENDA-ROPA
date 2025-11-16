@@ -1,4 +1,4 @@
-import { Venta, DetalleVenta, Producto, Abono } from '../models/index.js'
+import { Venta, DetalleVenta, Producto, Abono, Cliente } from '../models/index.js'
 import sequelize from '../config/database.js'
 
 import { Op } from 'sequelize';
@@ -148,7 +148,7 @@ export async function listarVentasService(query = {}) {
         model: DetalleVenta,
         as: 'detalleVentas',
         include: [
-          { model: Producto, as: 'producto', attributes: ['id', 'nombre', 'codigo_barras'] }
+          { model: Producto, as: 'producto', attributes: ['id', 'nombre', 'codigo_barras','marca'] }
         ]
       },
       { model: Abono, as: 'abonos' }
@@ -247,10 +247,13 @@ export async function registrarAbonoService(ventaId, { monto, usuario_id = null 
     if (venta.estado === 'anulado') throw { status: 400, message: 'Venta anulada' }
     if (venta.tipo_pago !== 'credito') throw { status: 400, message: 'Venta no es a crédito' }
 
-    // Validar número máximo de abonos
+    // Número de abonos registrados
     const abonosRegistrados = await Abono.count({ where: { venta_id: venta.id }, transaction: t })
-    if (venta.numero_abonos && abonosRegistrados >= venta.numero_abonos)
-      throw { status: 400, message: 'Se alcanzó el número máximo de abonos' }
+    let alertaMaxAbonos = null
+    if (venta.numero_abonos && abonosRegistrados >= venta.numero_abonos) {
+      // En vez de bloquear, solo guardamos la alerta
+      alertaMaxAbonos = 'Se alcanzó el número máximo de abonos, pero se permite registrar uno más.'
+    }
 
     const montoNum = Number(monto)
     const nuevoSaldo = Number((Number(venta.saldo_pendiente) - montoNum).toFixed(2))
@@ -269,7 +272,104 @@ export async function registrarAbonoService(ventaId, { monto, usuario_id = null 
     if (nuevoSaldo === 0) venta.estado = 'pagado'
     await venta.save({ transaction: t })
 
-    return { success: true, abono, venta }
+    return { success: true, abono, venta, alertaMaxAbonos }
   })
+}
+
+
+
+/**
+ *  Listar ventas a crédito por cliente
+ * @param {
+ * } clienteId 
+ * @returns 
+ */
+
+
+export async function listarVentasPorClienteService(clienteId) {
+  const ventas = await Venta.findAll({
+    where: {
+      cliente_id: clienteId,
+      tipo_pago: 'credito'
+    },
+    include: [
+      {
+        model: DetalleVenta,
+        as: 'detalleVentas',
+        include: [{ model: Producto, as: 'producto' }]
+      },
+      { model: Abono, as: 'abonos' }
+    ],
+    order: [['fecha', 'DESC']]
+  });
+
+  return ventas.map(v => ({
+    id: v.id,
+    total: parseFloat(v.total),
+    saldo_pendiente: parseFloat(v.saldo_pendiente),
+    fecha: v.fecha,
+    numero_abonos: v.numero_abonos,
+    plazo_dias: v.plazo_dias,
+    estado: v.estado,
+
+    productos: v.detalleVentas.map(d => ({
+      id: d.id,
+      nombre: d.producto?.nombre,
+      cantidad: d.cantidad,
+      precio: d.precio_unitario,
+      marca: d.producto?.marca
+    })),
+
+    abonos: v.abonos.map(a => ({
+      id: a.id,
+      monto: parseFloat(a.monto),
+      fecha: a.fecha
+    }))
+  }));
+}
+
+
+/**
+ *  Obtener detalle de una venta
+ * @param {
+ * } ventaId 
+ * @returns 
+ */
+export async function obtenerDetalleVentaService(ventaId) {
+  const venta = await Venta.findByPk(ventaId, {
+    include: [
+      {
+        model: DetalleVenta,
+        as: 'detalleVentas',
+        include: [{ model: Producto, as: 'producto' }]
+      },
+      { model: Abono, as: 'abonos' },
+      { model: Cliente, as: "cliente" }
+    ]
+  });
+
+  if (!venta) throw { status: 404, message: "Venta no encontrada" };
+
+  return {
+    id: venta.id,
+    total: parseFloat(venta.total),
+    saldo_pendiente: parseFloat(venta.saldo_pendiente),
+    fecha: venta.fecha,
+    cliente: venta.cliente?.nombre,
+
+    productos: venta.detalleVentas.map(d => ({
+      id: d.id,
+      nombre: d.producto?.nombre,
+      cantidad: d.cantidad,
+      precio: parseFloat(d.precio_unitario),
+      marca: d.producto?.marca
+    })),
+
+    abonos: venta.abonos.map(a => ({
+      id: a.id,
+      monto: parseFloat(a.monto),
+      fecha: a.fecha
+    }))
+  };
 }
 

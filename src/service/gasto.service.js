@@ -5,3 +5,9 @@ export async function registrarGastoService({ descripcion, monto, categoria = nu
   const gasto = await Gasto.create({ descripcion, monto, categoria, usuario_id, fecha: new Date() })
   return { success: true, gasto }
 }
+
+export async function listarGastosService() {
+  const gastos = await Gasto.findAll({ order: [['fecha', 'DESC']] });
+  return { success: true, gastos };
+}
+
